@@ -8,7 +8,14 @@ class Webhooks::StripeController < Webhooks::BaseController
 
   def verify_event
     signature = request.headers['Stripe-Signature']
-    secret =  ENV[""] || Rails.application.credentials.dig(:stripe, :webhook_signing_secret)
-    head :bad_request if params[:fail_verification]
+    secret =  ENV["STRIPE_SIGNING_SECRET"] || Rails.application.credentials.dig(:stripe, :webhook_signing_secret)
+    ::Stripe::Webhook::Signature.verify_header(
+      payload,
+      signature,
+      secret.to_s,
+      tolerance: Stripe::Webhook::DEFAULT_TOLERANCE
+    )
+  rescue ::Stripe::SignatureVerificationError
+    head :bad_request
   end
 end
